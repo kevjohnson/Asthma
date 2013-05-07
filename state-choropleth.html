@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+ 
+.states {
+  fill: none;
+  stroke: #000;
+  stroke-linejoin: round;
+}
+ 
+.q0-9 { fill:rgb(247,251,255); }
+.q1-9 { fill:rgb(222,235,247); }
+.q2-9 { fill:rgb(198,219,239); }
+.q3-9 { fill:rgb(158,202,225); }
+.q4-9 { fill:rgb(107,174,214); }
+.q5-9 { fill:rgb(66,146,198); }
+.q6-9 { fill:rgb(33,113,181); }
+.q7-9 { fill:rgb(8,81,156); }
+.q8-9 { fill:rgb(8,48,107); }
+
+.q0-9d {fill:rgb(213,62,79)}
+.q1-9d {fill:rgb(244,109,67)}
+.q2-9d {fill:rgb(253,174,97)}
+.q3-9d {fill:rgb(254,224,139)}
+.q4-9d {fill:rgb(255,255,191)}
+.q5-9d {fill:rgb(230,245,152)}
+.q6-9d {fill:rgb(171,221,164)}
+.q7-9d {fill:rgb(102,194,165)}
+.q8-9d {fill:rgb(50,136,189)}
+ 
+</style>
+<<<<<<< HEAD
+=======
+<h3 id="caption">Hover over a state:</h3>
+>>>>>>> yo
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+<script src="http://d3js.org/topojson.v0.min.js"></script>
+<script src="crossfilter.v1.min.js"></script>
+<script>
+ 
+var width = 960,
+    height = 500;
+
+var quantize = d3.scale.quantize()
+    .domain([0, .17])
+    .range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));
+	
+var quantizediff = d3.scale.quantize()
+    .domain([0, .05])
+    .range(d3.range(9).map(function(i) { return "q" + i + "-9d"; }));
+ 
+var path = d3.geo.path();
+ 
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+ 
+queue()
+    .defer(d3.json, "us-10m.json")
+    .defer(d3.csv, "state-choropleth.csv")
+    .await(ready);
+ 
+<<<<<<< HEAD
+function ready(error, us, asthmadata) {
+  var responseData = {};
+  var predictedData = {};
+  var differenceData = {};
+  
+  asthmadata.forEach(function(d) { responseData[d.State] = +d.Response; });
+  asthmadata.forEach(function(d) { predictedData[d.State] = +d.Predicted; });
+  asthmadata.forEach(function(d) { differenceData[d.State] = +d.Difference; });
+
+  var select = d3.select("body").append("select");
+  
+=======
+function ready(error, us, asthmadata, statenames) {
+  var responseData = {};
+  var predictedData = {};
+  var differenceData = {};
+  
+  var names = {};
+  statenames.forEach(function(d){
+	  names[d.id] = d.name;
+	});
+  asthmadata.forEach(function(d){
+	r = d.Response*100;
+	names[d.State] = names[d.State] + ": " + r.toFixed(1) + "%";
+  });  
+  
+  asthmadata.forEach(function(d) { responseData[d.State] = +d.Response; });
+  asthmadata.forEach(function(d) { predictedData[d.State] = +d.Predicted; });
+  asthmadata.forEach(function(d) { differenceData[d.State] = +d.Difference; });
+
+  var select = d3.select("body").append("select");
+  
+>>>>>>> yo
+  var parameters = ["Response","Predicted","Difference"];
+  select.selectAll("option")
+	.data(parameters)
+	.enter().append("option")
+	.attr("value", function(d){return d;})
+	.text(function(d){return d;});
+
+  select.on("change",function(){
+	var parameter = parameters[this.selectedIndex];
+	updateMap(parameter);	
+	});
+  var g = svg.append("g")
+	.attr("class", "states")
+  
+  updateMap("Response");
+
+  function updateMap(parameter){
+<<<<<<< HEAD
+	console.log(parameter);
+=======
+>>>>>>> yo
+	g.selectAll("path").remove();
+    var paths = g.selectAll("path")
+      .data(topojson.object(us, us.objects.states).geometries)
+    .enter().append("path")
+      .attr("class", function(d) {
+	  if(parameter==="Response"){
+		
+		return quantize(responseData[d.id]);
+	  
+	  } else if(parameter==="Predicted"){
+		
+		return quantize(predictedData[d.id]);
+		
+	  } else{
+		
+		return quantizediff(differenceData[d.id])};
+	  
+	  })
+<<<<<<< HEAD
+      .attr("d", path);
+  }
+}
+</script>
+=======
+      .attr("d", path)
+	  .on("mouseover",showCaption)
+	  .on("mouseout",function(){caption.html(starter);});
+  var caption = d3.select('#caption')
+  ,starter = caption.html();
+
+  function showCaption(d,i) {
+    var name = names[d.id];
+    caption.html(name);
+  }
+}
+}
+</script>
+>>>>>>> yo
