@@ -28,6 +28,7 @@ queue()
 	.await(ready);
 	
 function ready(error, data, statenames) {
+
 	svg.selectAll("rect.Response")
 		.data(data)
 		.enter()
@@ -43,6 +44,7 @@ function ready(error, data, statenames) {
 			return d.Response*1000;
 		})
 		.attr("fill",c(1));
+		
 	svg.selectAll("rect.Predicted")
 		.data(data)
 		.enter()
@@ -58,6 +60,7 @@ function ready(error, data, statenames) {
 			return d.Predicted*1000;
 		})
 		.attr("fill",c(2));
+		
 	svg.selectAll("rect.Difference")
 		.data(data)
 		.enter()
@@ -73,11 +76,12 @@ function ready(error, data, statenames) {
 			return d.Difference*1000;
 		})
 		.attr("fill",c(3));
+		
 	var names = {};
 		statenames.forEach(function(d){
 			names[d.id] = d.code;
 	});
-	console.log(names);
+	
 	svg.selectAll("text")
 		.data(data)
 		.enter()
