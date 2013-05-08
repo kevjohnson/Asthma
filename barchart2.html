@@ -21,14 +21,21 @@ body {
   display: none;
 }
 
+label {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
 </style>
+<label><input type="checkbox"> Sort values</label>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="http://d3js.org/queue.v1.min.js"></script>
 <script>
 
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = 960 - margin.left - margin.right,
+    width = 1000 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom,
 	code = "";
 
@@ -49,7 +56,7 @@ var xAxis = d3.svg.axis()
 var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
-    .tickFormat(d3.format(".2s"));
+    .tickFormat(d3.format(".0%"));
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -69,7 +76,7 @@ function ready(error, data, statenames) {
     d.ages = ageNames.map(function(name) { return {name: name, value: +d[name]}; });
   });
 
-  x0.domain(data.map(function(d) { return getStateCode(d.State); }));
+  x0.domain(data.map(function(d) { return d.State; }));
   x1.domain(ageNames).rangeRoundBands([0, x0.rangeBand()]);
   y.domain([0, d3.max(data, function(d) { return d3.max(d.ages, function(d) { return d.value; }); })]);
 
@@ -102,6 +109,12 @@ function ready(error, data, statenames) {
       .attr("y", function(d) { return y(d.value); })
       .attr("height", function(d) { return height - y(d.value); })
       .style("fill", function(d) { return color(d.name); });
+	  
+  d3.select("input").on("change", change);
+
+  var sortTimeout = setTimeout(function() {
+    d3.select("input").property("checked", true).each(change);
+  }, 2000);
 
   var legend = svg.selectAll(".legend")
       .data(ageNames.slice().reverse())
@@ -129,6 +142,29 @@ function ready(error, data, statenames) {
     return code;
   }
 
+  function change() {
+    clearTimeout(sortTimeout);
+
+    // Copy-on-write since tweens are evaluated after a delay.
+    var x2 = x0.domain(data.sort(this.checked
+        ? function(a, b) { return b.Response - a.Response; }
+        : function(a, b) { return d3.ascending(a.State, b.State); })
+        .map(function(d) { return d.State; }))
+        .copy();
+	
+	
+    var transition = svg.transition().duration(750);
+    var delay = function(d, i) { return i * 50; };
+		
+	transition.selectAll("g.g")
+		.delay(delay)
+		.attr("transform",function(d){return "translate("+x2(d.State)+",0)";});
+
+    transition.select(".x.axis")
+        .call(xAxis)
+      .selectAll("g")
+        .delay(delay);
+  }
 }
 
 </script>
