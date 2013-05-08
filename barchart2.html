@@ -21,14 +21,7 @@ body {
   display: none;
 }
 
-label {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
 </style>
-<label><input type="checkbox"> Sort values</label>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="http://d3js.org/queue.v1.min.js"></script>
@@ -110,7 +103,20 @@ function ready(error, data, statenames) {
       .attr("height", function(d) { return height - y(d.value); })
       .style("fill", function(d) { return color(d.name); });
 	  
-  d3.select("input").on("change", change);
+    var select = d3.select("body").append("select");  
+
+  var parameters = ["Original","Response","Predicted","Difference"];
+  select.selectAll("option")
+		.data(parameters)
+	 .enter().append("option")
+		.attr("value", function(d,i){return i;})
+		.text(function(d){return d;});
+
+  select.on("change",function(){
+		var parameter = this.selectedIndex; //this.selectedIndex returns a number which corresponds to the parameter array above
+		change(parameter);
+	});
+  
 
   var sortTimeout = setTimeout(function() {
     d3.select("input").property("checked", true).each(change);
@@ -123,13 +129,13 @@ function ready(error, data, statenames) {
       .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
   legend.append("rect")
-      .attr("x", width - 18)
+      .attr("x", 80)
       .attr("width", 18)
       .attr("height", 18)
       .style("fill", color);
 
   legend.append("text")
-      .attr("x", width - 24)
+      .attr("x", 74)
       .attr("y", 9)
       .attr("dy", ".35em")
       .style("text-anchor", "end")
@@ -142,16 +148,26 @@ function ready(error, data, statenames) {
     return code;
   }
 
-  function change() {
-    clearTimeout(sortTimeout);
-
+  function change(parameter) {
+console.log
     // Copy-on-write since tweens are evaluated after a delay.
-    var x2 = x0.domain(data.sort(this.checked
-        ? function(a, b) { return b.Response - a.Response; }
-        : function(a, b) { return d3.ascending(a.State, b.State); })
-        .map(function(d) { return d.State; }))
-        .copy();
-	
+	if (parameter==1){
+		var x2 = x0.domain(data.sort(function(a, b) { return a.Response - b.Response; })
+			.map(function(d) { return d.State; }))
+			.copy();
+	}else if (parameter==2){
+		var x2 = x0.domain(data.sort(function(a, b) { return a.Predicted - b.Predicted; })
+			.map(function(d) { return d.State; }))
+			.copy();
+	}else if (parameter==3){
+		var x2 = x0.domain(data.sort(function(a, b) { return a.Difference - b.Difference; })
+			.map(function(d) { return d.State; }))
+			.copy();
+	}else if (parameter==0){
+		var x2 = x0.domain(data.sort(function(a, b) { return d3.ascending(a.State,b.State); })
+			.map(function(d) { return d.State; }))
+			.copy();
+	}
 	
     var transition = svg.transition().duration(750);
     var delay = function(d, i) { return i * 50; };
