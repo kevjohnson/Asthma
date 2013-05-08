@@ -55,6 +55,8 @@ for (idx=0;idx<3;idx++){
   
 	var g = svg.append("g")
 		.attr("class", "states")
+		.attr("id", "map")
+
   
   updateMap(0);
 
