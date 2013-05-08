@@ -92,7 +92,7 @@ for (idx=0;idx<3;idx++){
   }; 
   
   function updateLegend(parameter){
-
+console.log(parameter);
 		//compute the min-max range for each quanta, and store the results in an array
 		var quanta = quantize.range().length;
 		var quantaValues = new Array(quanta);
