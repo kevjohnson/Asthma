@@ -3,13 +3,6 @@
 <style>
 
 body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  margin: auto;
-  position: relative;
-  width: 960px;
-}
-
-text {
   font: 10px sans-serif;
 }
 
@@ -20,159 +13,122 @@ text {
   shape-rendering: crispEdges;
 }
 
-form {
-  position: absolute;
-  right: 10px;
-  top: 10px;
+.bar {
+  fill: steelblue;
+}
+
+.x.axis path {
+  display: none;
 }
 
 </style>
-<form>
-  <label><input type="radio" name="mode" value="grouped" checked> Grouped</label>
-  <label><input type="radio" name="mode" value="stacked"> Stacked</label>
-</form>
+<body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
 <script>
-var n = 3, // number of layers
-	m = 51, // number of samples per layer
-	stack = d3.layout.stack();
 
-d3.csv("asthma.csv",function(data){
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom,
+	code = "";
 
-	var responseData = {};
-	var predictedData = {};
-	var differenceData = {};
-	var stateData={};
-	var dataArray=new Array(3);
+var x0 = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
 
-	for (idx=0;idx<3;idx++)
-	{
-	  dataArray[idx]= new Array(51);
-	  data.forEach(function(d,i){  
-		responseData[d.State] = +d.Response;
-		predictedData[d.State] = +d.Predicted;
-		differenceData[d.State] = +d.Difference;
-		stateData[d.State]=[responseData[d.State],predictedData[d.State],differenceData[d.State]];    
-		dataArray[idx][i]={x: +d.State, y: stateData[d.State][idx]};
-	  });
-	}
-	console.log(dataArray);
-	console.log(stack(dataArray));
+var x1 = d3.scale.ordinal();
 
-	var layers = stack(dataArray),
-		yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; }); }),
-		yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var color = d3.scale.category10();
+
+var xAxis = d3.svg.axis()
+    .scale(x0)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickFormat(d3.format(".2s"));
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 	
-	console.log(d3.range(n).map(function() { return bumpLayer(m, .1); }))
+queue()
+    .defer(d3.csv, "asthma.csv")
+	.defer(d3.tsv, "us-state-names.tsv")
+	.await(ready);
 
-	var margin = {top: 40, right: 10, bottom: 20, left: 10},
-		width = 960 - margin.left - margin.right,
-		height = 500 - margin.top - margin.bottom;
+function ready(error, data, statenames) {
+  var ageNames = d3.keys(data[0]).filter(function(key) { return key !== "State"; });
 
-	var x = d3.scale.ordinal()
-		.domain(d3.range(m))
-		.rangeRoundBands([0, width], .08);
+  data.forEach(function(d) {
+    d.ages = ageNames.map(function(name) { return {name: name, value: +d[name]}; });
+  });
 
-	var y = d3.scale.linear()
-		.domain([0, yStackMax])
-		.range([height, 0]);
+  x0.domain(data.map(function(d) { return getStateCode(d.State); }));
+  x1.domain(ageNames).rangeRoundBands([0, x0.rangeBand()]);
+  y.domain([0, d3.max(data, function(d) { return d3.max(d.ages, function(d) { return d.value; }); })]);
 
-	var color = d3.scale.linear()
-		.domain([0, n - 1])
-		.range(["#aad", "#556"]);
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
 
-	var xAxis = d3.svg.axis()
-		.scale(x)
-		.tickSize(0)
-		.tickPadding(6)
-		.orient("bottom");
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Prevalence");
 
-	var svg = d3.select("body").append("svg")
-		.attr("width", width + margin.left + margin.right)
-		.attr("height", height + margin.top + margin.bottom)
-	  .append("g")
-		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  var state = svg.selectAll(".state")
+      .data(data)
+    .enter().append("g")
+      .attr("class", "g")
+      .attr("transform", function(d) { return "translate(" + x0(d.State) + ",0)"; });
 
-	var layer = svg.selectAll(".layer")
-		.data(layers)
-	  .enter().append("g")
-		.attr("class", "layer")
-		.style("fill", function(d, i) { return color(i); });
+  state.selectAll("rect")
+      .data(function(d) { return d.ages; })
+    .enter().append("rect")
+      .attr("width", x1.rangeBand())
+      .attr("x", function(d) { return x1(d.name); })
+      .attr("y", function(d) { return y(d.value); })
+      .attr("height", function(d) { return height - y(d.value); })
+      .style("fill", function(d) { return color(d.name); });
 
-	var rect = layer.selectAll("rect")
-		.data(function(d) { return d; })
-	  .enter().append("rect")
-		.attr("x", function(d) { return x(d.x); })
-		.attr("y", height)
-		.attr("width", x.rangeBand())
-		.attr("height", 0);
+  var legend = svg.selectAll(".legend")
+      .data(ageNames.slice().reverse())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
-	rect.transition()
-		.delay(function(d, i) { return i * 10; })
-		.attr("y", function(d) { return y(d.y0 + d.y); })
-		.attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); });
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
 
-	svg.append("g")
-		.attr("class", "x axis")
-		.attr("transform", "translate(0," + height + ")")
-		.call(xAxis);
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
+	  
+  function getStateCode(stateNum){
+	statenames.forEach(function(d){
+        if(d.id==stateNum){code = d.code;}
+    });
+    return code;
+  }
 
-	d3.selectAll("input").on("change", change);
-
-	var timeout = setTimeout(function() {
-	  d3.select("input[value=\"grouped\"]").property("checked", true).each(change);
-	}, 2000);
-
-	function change() {
-	  clearTimeout(timeout);
-	  if (this.value === "grouped") transitionGrouped();
-	  else transitionStacked();
-	}
-
-	function transitionGrouped() {
-	  y.domain([0, yGroupMax]);
-
-	  rect.transition()
-		  .duration(500)
-		  .delay(function(d, i) { return i * 10; })
-		  .attr("x", function(d, i, j) { return x(d.x) + x.rangeBand() / n * j; })
-		  .attr("width", x.rangeBand() / n)
-		.transition()
-		  .attr("y", function(d) { return y(d.y); })
-		  .attr("height", function(d) { return height - y(d.y); });
-	}
-
-	function transitionStacked() {
-	  y.domain([0, yStackMax]);
-
-	  rect.transition()
-		  .duration(500)
-		  .delay(function(d, i) { return i * 10; })
-		  .attr("y", function(d) { return y(d.y0 + d.y); })
-		  .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); })
-		.transition()
-		  .attr("x", function(d) { return x(d.x); })
-		  .attr("width", x.rangeBand());
-	}
-
-	// Inspired by Lee Byron's test data generator.
-	function bumpLayer(n, o) {
-
-	  function bump(a) {
-		var x = 1 / (.1 + Math.random()),
-			y = 2 * Math.random() - .5,
-			z = 10 / (.1 + Math.random());
-		for (var i = 0; i < n; i++) {
-		  var w = (i / n - y) * z;
-		  a[i] += x * Math.exp(-w * w);
-		}
-	  }
-
-	  var a = [], i;
-	  for (i = 0; i < n; ++i) a[i] = o + o * Math.random();
-	  for (i = 0; i < 5; ++i) bump(a);
-	  return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
-	}
-});
+}
 
 </script>
