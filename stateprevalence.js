@@ -4,7 +4,7 @@ var width = 1000,
 	path = d3.geo.path();
 
 var quantize = d3.scale.quantize()
-	.range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));
+
 
 var svg = d3.select("body").append("svg")
 	.attr("width", width)
@@ -55,6 +55,8 @@ for (idx=0;idx<3;idx++){
   
 	var g = svg.append("g")
 		.attr("class", "states")
+		.attr("id", "map")
+
   
   updateMap(0);
 
@@ -74,7 +76,8 @@ for (idx=0;idx<3;idx++){
 	quantize.domain(
 		[d3.min(dataArray[parameter], function(d,i){return dataArray[parameter][i].value;}),
 		d3.max(dataArray[parameter], function(d,i){return dataArray[parameter][i].value;})]
-	)
+	);
+		quantize.range(d3.range(9).map(function(i) { return "q"+ parameter + i + "-9"; }));
 
 	g.selectAll("path").remove();
 
