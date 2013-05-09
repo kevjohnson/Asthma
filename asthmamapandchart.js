@@ -51,18 +51,27 @@ var quantize = d3.scale.quantize()
 //make a dropdown menu with the parameters as options
 var select = d3.select(".dropdown").append("select");  
 
-var parameters = ["Original","Response","Predicted","Difference"];
+	var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
+  asthmadata.forEach(function(d) {
+    d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
+  });
+	console.log(params);
+  x0.domain(asthmadata.map(function(d) { return d.State; }));
+  x1.domain(params).rangeRoundBands([0, x0.rangeBand()]);
+  y.domain([0, d3.max(asthmadata, function(d) { return d3.max(d.rate, function(d) { return d.value; }); })]);
+	
+
+
 select.selectAll("option")
-	.data(parameters)
+	.data(params)
  .enter().append("option")
 	.attr("value", function(d,i){return i;})
 	.text(function(d){return d;});
 
 select.on("change",function(){
 	var parameter = this.selectedIndex; //this.selectedIndex returns a number which corresponds to the parameter array above
-	if (parameter != 0){
-		updateMap(parameter - 1);
-		updateMapLegend(parameter - 1);};
+	updateMap(parameter);
+	updateMapLegend(parameter);
 	change(parameter);
 });
 
@@ -92,16 +101,6 @@ for (idx=0;idx<3;idx++){
 	});
 }
 
-	var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
-  asthmadata.forEach(function(d) {
-    d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
-  });
-	console.log(params);
-  x0.domain(asthmadata.map(function(d) { return d.State; }));
-  x1.domain(params).rangeRoundBands([0, x0.rangeBand()]);
-  y.domain([0, d3.max(asthmadata, function(d) { return d3.max(d.rate, function(d) { return d.value; }); })]);
-	
-
 	var g = svgMap.append("g")
 		.attr("class", "states")
 		.attr("id", "map")
@@ -109,6 +108,7 @@ for (idx=0;idx<3;idx++){
   
   updateMap(0);
 	updateMapLegend(0);
+	change(0);
 
   function updateMap(parameter){
 
@@ -191,7 +191,7 @@ for (idx=0;idx<3;idx++){
 			.attr("dy", ".4em")
 			.attr("font-family", "sans-serif")
 			.style("text-anchor", "end")
-			.text(parameters[parameter + 1]);
+			.text(params[parameter]);
   };
 
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -262,20 +262,16 @@ for (idx=0;idx<3;idx++){
 	  
   function change(parameter) {
     // Copy-on-write since tweens are evaluated after a delay.
-	if (parameter==1){
+	if (parameter==0){
 		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Response - b.Response; })
 			.map(function(d) { return d.State; }))
 			.copy();
-	}else if (parameter==2){
+	}else if (parameter==1){
 		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Predicted - b.Predicted; })
 			.map(function(d) { return d.State; }))
 			.copy();
-	}else if (parameter==3){
+	}else if (parameter==2){
 		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Difference - b.Difference; })
-			.map(function(d) { return d.State; }))
-			.copy();
-	}else if (parameter==0){
-		var x2 = x0.domain(asthmadata.sort(function(a, b) { return d3.ascending(a.State,b.State); })
 			.map(function(d) { return d.State; }))
 			.copy();
 	}
