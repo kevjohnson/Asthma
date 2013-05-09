@@ -1,6 +1,7 @@
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 20, right: 20, bottom: 40, left: 40},
     width = 1000 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom,
+    height = 540 - margin.top - margin.bottom,
+	chartheight = 250 - margin.top - margin.bottom,
   	code = "",
 		path = d3.geo.path(),
 		names = [];
@@ -11,7 +12,7 @@ var x0 = d3.scale.ordinal()
 var x1 = d3.scale.ordinal();
 
 var y = d3.scale.linear()
-    .range([height, 0]);
+    .range([chartheight, 0]);
 
 var color = d3.scale.category10();
 
@@ -38,11 +39,10 @@ queue()
 
 function ready(error, us, asthmadata, statenames) {
 
-var svgChart = d3.select(".chart");
-console.log(svgChart);
-	svgChart.append("svg")
+var svgChart = d3.select("body")
+	.append("svg")
     .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("height", chartheight + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -116,11 +116,12 @@ for (idx=0;idx<3;idx++){
 	  statenames.forEach(function(d){
 		  names[d.id] = d.name;
 		});
-	  
+	  console.log(names);
 		asthmadata.forEach(function(d,i){
 			r=dataArray[parameter][i].value*100; //no more if/then statements!
-			names[d.State] = names[d.State] + ": " + r.toFixed(1) + "%";
+			names[getStateID(d.State)] = names[getStateID(d.State)] + ": " + r.toFixed(1) + "%";
 	  });
+	  console.log(names);
 
 //change the domain of the quantize function to match the min and max of the data for the given parameter
 	quantize.domain(
@@ -201,7 +202,7 @@ for (idx=0;idx<3;idx++){
 	
   svgChart.append("g")
       .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
+      .attr("transform", "translate(0," + chartheight + ")")
       .call(xAxis);
 
   svgChart.append("g")
@@ -226,7 +227,7 @@ for (idx=0;idx<3;idx++){
       .attr("width", x1.rangeBand())
       .attr("x", function(d) { return x1(d.name); })
       .attr("y", function(d) { return y(d.value); })
-      .attr("height", function(d) { return height - y(d.value); })
+      .attr("height", function(d) { return chartheight - y(d.value); })
       .style("fill", function(d) { return color(d.name); });
 
   var sortTimeout = setTimeout(function() {
@@ -252,6 +253,13 @@ for (idx=0;idx<3;idx++){
       .style("text-anchor", "end")
       .text(function(d) { return d; });
 	  
+	function getStateID(statecode){
+	statenames.forEach(function(d){
+        if(d.code==statecode){id = d.id;}
+    });
+    return id;
+  }
+	  
   function change(parameter) {
     // Copy-on-write since tweens are evaluated after a delay.
 	if (parameter==1){
@@ -263,7 +271,7 @@ for (idx=0;idx<3;idx++){
 			.map(function(d) { return d.State; }))
 			.copy();
 	}else if (parameter==3){
-		var x2 = x0.domain(dasthmaata.sort(function(a, b) { return a.Difference - b.Difference; })
+		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Difference - b.Difference; })
 			.map(function(d) { return d.State; }))
 			.copy();
 	}else if (parameter==0){
