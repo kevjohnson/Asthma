@@ -1,6 +1,7 @@
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 20, right: 20, bottom: 40, left: 40},
     width = 1000 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom,
+    height = 540 - margin.top - margin.bottom,
+	chartheight = 250 - margin.top - margin.bottom,
   	code = "",
 		path = d3.geo.path(),
 		names = [];
@@ -11,7 +12,7 @@ var x0 = d3.scale.ordinal()
 var x1 = d3.scale.ordinal();
 
 var y = d3.scale.linear()
-    .range([height, 0]);
+    .range([chartheight, 0]);
 
 var color = d3.scale.category10();
 
@@ -38,11 +39,10 @@ queue()
 
 function ready(error, us, asthmadata, statenames) {
 
-var svgChart = d3.select(".chart");
-console.log(svgChart);
-	svgChart.append("svg")
+var svgChart = d3.select("body")
+	.append("svg")
     .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("height", chartheight + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -51,18 +51,27 @@ var quantize = d3.scale.quantize()
 //make a dropdown menu with the parameters as options
 var select = d3.select(".dropdown").append("select");  
 
-var parameters = ["Original","Response","Predicted","Difference"];
+	var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
+  asthmadata.forEach(function(d) {
+    d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
+  });
+	console.log(params);
+  x0.domain(asthmadata.map(function(d) { return d.State; }));
+  x1.domain(params).rangeRoundBands([0, x0.rangeBand()]);
+  y.domain([0, d3.max(asthmadata, function(d) { return d3.max(d.rate, function(d) { return d.value; }); })]);
+	
+
+
 select.selectAll("option")
-	.data(parameters)
+	.data(params)
  .enter().append("option")
 	.attr("value", function(d,i){return i;})
 	.text(function(d){return d;});
 
 select.on("change",function(){
 	var parameter = this.selectedIndex; //this.selectedIndex returns a number which corresponds to the parameter array above
-	if (parameter != 0){
-		updateMap(parameter - 1);
-		updateMapLegend(parameter - 1);};
+	updateMap(parameter);
+	updateMapLegend(parameter);
 	change(parameter);
 });
 
@@ -92,16 +101,6 @@ for (idx=0;idx<3;idx++){
 	});
 }
 
-	var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
-  asthmadata.forEach(function(d) {
-    d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
-  });
-	console.log(params);
-  x0.domain(asthmadata.map(function(d) { return d.State; }));
-  x1.domain(params).rangeRoundBands([0, x0.rangeBand()]);
-  y.domain([0, d3.max(asthmadata, function(d) { return d3.max(d.rate, function(d) { return d.value; }); })]);
-	
-
 	var g = svgMap.append("g")
 		.attr("class", "states")
 		.attr("id", "map")
@@ -109,6 +108,7 @@ for (idx=0;idx<3;idx++){
   
   updateMap(0);
 	updateMapLegend(0);
+	change(0);
 
   function updateMap(parameter){
 
@@ -116,11 +116,12 @@ for (idx=0;idx<3;idx++){
 	  statenames.forEach(function(d){
 		  names[d.id] = d.name;
 		});
-	  
+	  console.log(names);
 		asthmadata.forEach(function(d,i){
 			r=dataArray[parameter][i].value*100; //no more if/then statements!
-			names[d.State] = names[d.State] + ": " + r.toFixed(1) + "%";
+			names[getStateID(d.State)] = names[getStateID(d.State)] + ": " + r.toFixed(1) + "%";
 	  });
+	  console.log(names);
 
 //change the domain of the quantize function to match the min and max of the data for the given parameter
 	quantize.domain(
@@ -190,7 +191,7 @@ for (idx=0;idx<3;idx++){
 			.attr("dy", ".4em")
 			.attr("font-family", "sans-serif")
 			.style("text-anchor", "end")
-			.text(parameters[parameter + 1]);
+			.text(params[parameter]);
   };
 
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -201,7 +202,7 @@ for (idx=0;idx<3;idx++){
 	
   svgChart.append("g")
       .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
+      .attr("transform", "translate(0," + chartheight + ")")
       .call(xAxis);
 
   svgChart.append("g")
@@ -226,7 +227,7 @@ for (idx=0;idx<3;idx++){
       .attr("width", x1.rangeBand())
       .attr("x", function(d) { return x1(d.name); })
       .attr("y", function(d) { return y(d.value); })
-      .attr("height", function(d) { return height - y(d.value); })
+      .attr("height", function(d) { return chartheight - y(d.value); })
       .style("fill", function(d) { return color(d.name); });
 
   var sortTimeout = setTimeout(function() {
@@ -252,22 +253,25 @@ for (idx=0;idx<3;idx++){
       .style("text-anchor", "end")
       .text(function(d) { return d; });
 	  
+	function getStateID(statecode){
+	statenames.forEach(function(d){
+        if(d.code==statecode){id = d.id;}
+    });
+    return id;
+  }
+	  
   function change(parameter) {
     // Copy-on-write since tweens are evaluated after a delay.
-	if (parameter==1){
+	if (parameter==0){
 		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Response - b.Response; })
 			.map(function(d) { return d.State; }))
 			.copy();
-	}else if (parameter==2){
+	}else if (parameter==1){
 		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Predicted - b.Predicted; })
 			.map(function(d) { return d.State; }))
 			.copy();
-	}else if (parameter==3){
-		var x2 = x0.domain(dasthmaata.sort(function(a, b) { return a.Difference - b.Difference; })
-			.map(function(d) { return d.State; }))
-			.copy();
-	}else if (parameter==0){
-		var x2 = x0.domain(asthmadata.sort(function(a, b) { return d3.ascending(a.State,b.State); })
+	}else if (parameter==2){
+		var x2 = x0.domain(asthmadata.sort(function(a, b) { return a.Difference - b.Difference; })
 			.map(function(d) { return d.State; }))
 			.copy();
 	}
