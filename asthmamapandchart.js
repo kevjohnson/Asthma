@@ -26,14 +26,10 @@ var yAxis = d3.svg.axis()
     .tickFormat(d3.format(".0%"));
 
 
-
-
-
- 
 queue()
   .defer(d3.json, "us-10m.json")
   .defer(d3.csv, "asthma.csv")
-	.defer(d3.tsv, "us-state-names.tsv")
+	.defer(d3.tsv, "us-state-names.tsv" )
   .await(ready);
   
 
@@ -49,13 +45,14 @@ var svgChart = d3.select("body")
 var quantize = d3.scale.quantize()
 
 //make a dropdown menu with the parameters as options
-var select = d3.select(".dropdown").append("select");  
-
-	var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
-  asthmadata.forEach(function(d) {
-    d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
-  });
-	console.log(params);
+var select = d3.select(".dropdown").append("select");
+var params = d3.keys(asthmadata[0]).filter(function(key) { return key !== "State"; });
+asthmadata.forEach(function(d) {
+	d.rate = params.map(function(name) { return {name: name, value: +d[name]}; });
+});
+	
+	
+	console.log(asthmadata)
   x0.domain(asthmadata.map(function(d) { return d.State; }));
   x1.domain(params).rangeRoundBands([0, x0.rangeBand()]);
   y.domain([0, d3.max(asthmadata, function(d) { return d3.max(d.rate, function(d) { return d.value; }); })]);
@@ -78,28 +75,6 @@ select.on("change",function(){
 var svgMap = d3.select(".map").append("svg");
 	svgMap.attr("width", width)
 	.attr("height", height);
-	
-
-  var responseData = {};
-  var predictedData = {};
-  var differenceData = {};
-  var stateData = {};
-  var dataArray=new Array(3);
-
-//embarassing hack. there has got to be a better way to do this.
-//loop to create an array (dataArray) that has 3 arrays, each representing one of the parameters for ach state (predicted, response, difference)   
-for (idx=0;idx<3;idx++){
-
-  dataArray[idx]= new Array(51);
-  asthmadata.forEach(function(d,i){  
-    responseData[getStateID(d.State)] = +d.Response;
-    predictedData[getStateID(d.State)] = +d.Predicted;
-    differenceData[getStateID(d.State)] = +d.Difference;
-    stateData[getStateID(d.State)]=[responseData[getStateID(d.State)],predictedData[getStateID(d.State)],differenceData[getStateID(d.State)]];    
-    dataArray[idx][i]={State: getStateID(d.State), value: stateData[getStateID(d.State)][idx]};
-  
-	});
-}
 
 	var g = svgMap.append("g")
 		.attr("class", "states")
@@ -113,33 +88,34 @@ for (idx=0;idx<3;idx++){
   function updateMap(parameter){
 
 	  var r;
+		var rateById = {};
+		
 	  statenames.forEach(function(d){
 		  names[d.id] = d.name;
 		});
-	  console.log(names);
 		asthmadata.forEach(function(d,i){
-			r=dataArray[parameter][i].value*100; //no more if/then statements!
+			r=d.rate[parameter].value*100; //no more if/then statements!
 			names[getStateID(d.State)] = names[getStateID(d.State)] + ": " + r.toFixed(1) + "%";
+			id=getStateID(d.State)
+			rateById[id] = r/100;
 	  });
-	  console.log(names);
 
 //change the domain of the quantize function to match the min and max of the data for the given parameter
 	quantize.domain(
-		[d3.min(dataArray[parameter], function(d,i){return dataArray[parameter][i].value;}),
-		d3.max(dataArray[parameter], function(d,i){return dataArray[parameter][i].value;})]
+		[d3.min(asthmadata, function(d){return d.rate[parameter].value;}),
+		d3.max(asthmadata, function(d){return d.rate[parameter].value;})]
 	);
-		quantize.range(d3.range(9).map(function(i) { return "q"+ parameter + i + "-9"; }));
-
-	g.selectAll("path").remove();
+		quantize.range(d3.range(9).map(function(d,i) { return "q"+ parameter + i + "-9"; }));
+		g.selectAll("path").remove();
 
 	var paths = g.selectAll("path")
 		.data(topojson.object(us, us.objects.states).geometries)
 	 .enter().append("path")
-		.attr("class", function(d,i){return quantize( dataArray[parameter][i].value );})
 		.attr("d", path)
+		.attr("class", function(d){return quantize(rateById[d.id]);})
 		.on("mouseover",showCaption)
 		.on("mouseout",function(){caption.html(starter);});
-		}; 
+		};
   
   function updateMapLegend(parameter){
 
