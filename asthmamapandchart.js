@@ -92,11 +92,11 @@ for (idx=0;idx<3;idx++){
 
   dataArray[idx]= new Array(51);
   asthmadata.forEach(function(d,i){  
-    responseData[d.State] = +d.Response;
-    predictedData[d.State] = +d.Predicted;
-    differenceData[d.State] = +d.Difference;
-    stateData[d.State]=[responseData[d.State],predictedData[d.State],differenceData[d.State]];    
-    dataArray[idx][i]={State: d.State, value: stateData[d.State][idx]};
+    responseData[getStateID(d.State)] = +d.Response;
+    predictedData[getStateID(d.State)] = +d.Predicted;
+    differenceData[getStateID(d.State)] = +d.Difference;
+    stateData[getStateID(d.State)]=[responseData[getStateID(d.State)],predictedData[getStateID(d.State)],differenceData[getStateID(d.State)]];    
+    dataArray[idx][i]={State: getStateID(d.State), value: stateData[getStateID(d.State)][idx]};
   
 	});
 }
